@@ -26,6 +26,9 @@
         .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; width: 100%; padding: 16px; font-size: 16px; }
         .btn-success:hover { opacity: 0.9; transform: translateY(-2px); }
         .btn-success:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-warning { background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); color: white; width: 100%; padding: 16px; font-size: 16px; }
+        .btn-warning:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-warning:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .result { background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 16px; font-family: 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
         .result.success { background: #d4edda; border-left: 4px solid #28a745; }
         .result.error { background: #f8d7da; border-left: 4px solid #dc3545; }
@@ -41,6 +44,7 @@
         .tab-nav { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 12px; }
         .tab-btn { flex: 1; padding: 12px 20px; background: transparent; color: white; border-radius: 8px; font-size: 14px; font-weight: 600; }
         .tab-btn.active { background: white; color: #667eea; }
+        .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
         @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } .tab-nav { flex-direction: column; } }
     </style>
 </head>
@@ -49,59 +53,310 @@
         <h1>⚡ ThunderPay API Test Tool</h1>
         <div class="tab-nav">
             <button class="tab-btn active" onclick="switchTab('create')">📝 Create Order</button>
-            <button class="tab-btn" onclick="switchTab('query')">🔍 Query Order</button>
-        </div>
-        <div class="card">
-            <h2>🔑 Merchant Configuration</h2>
-            <div class="grid-2">
-                <div class="form-group"><label>ACCESS_KEY</label><input type="text" id="accessKey" placeholder="Enter Access Key"></div>
-                <div class="form-group"><label>SECRET_KEY</label><input type="text" id="secretKey" placeholder="Enter Secret Key"></div>
-            </div>
-            <div class="form-group"><label>API Base URL</label><input type="text" id="baseUrl" value="https://thunderpay.app"></div>
+            <button class="tab-btn" onclick="switchTab('query')">🔍 Query (ThunderPay)</button>
+            <button class="tab-btn" onclick="switchTab('dpay')">🔎 Query (DPAY)</button>
         </div>
 
+        <!-- ThunderPay Create Order Tab -->
         <div id="createTab">
             <div class="card">
+                <h2>🔑 Merchant Configuration</h2>
+                <div class="grid-2">
+                    <div class="form-group"><label>ACCESS_KEY</label><input type="text" id="tpAccessKey" placeholder="Enter Access Key"></div>
+                    <div class="form-group"><label>SECRET_KEY</label><input type="text" id="tpSecretKey" placeholder="Enter Secret Key"></div>
+                </div>
+                <div class="form-group"><label>API Base URL</label><input type="text" id="tpBaseUrl" value="https://thunderpay.app"></div>
+            </div>
+            <div class="card">
                 <h2>📝 Order Information</h2>
-                <div class="form-group"><label>API Path</label><input type="text" id="apiPath" value="/api/place/upi/vipin"></div>
-                <div class="form-group"><label>Order No</label><div class="input-group"><input type="text" id="orderNo"><button class="btn-secondary" onclick="generateOrderNo()">🎲 Random</button></div></div>
-                <div class="grid-2"><div class="form-group"><label>Order Amount</label><input type="number" id="orderAmount" value="300"></div><div class="form-group"><label>Full Name</label><input type="text" id="fullName" value="Ravi Chandrana"></div></div>
-                <div class="form-group"><label>Notify URL</label><input type="url" id="notifyUrl" value="http://www.xxx.com/api"></div>
+                <div class="form-group"><label>API Path</label><input type="text" id="tpApiPath" value="/api/place/upi/vipin"></div>
+                <div class="form-group"><label>Order No</label><div class="input-group"><input type="text" id="tpOrderNo"><button class="btn-secondary" onclick="generateOrderNo()">🎲 Random</button></div></div>
+                <div class="grid-2"><div class="form-group"><label>Order Amount</label><input type="number" id="tpOrderAmount" value="300"></div><div class="form-group"><label>Full Name</label><input type="text" id="tpFullName" value="Ravi Chandrana"></div></div>
+                <div class="form-group"><label>Notify URL</label><input type="url" id="tpNotifyUrl" value="http://www.xxx.com/api"></div>
             </div>
             <div class="card">
                 <h2>🚀 Send Request</h2>
-                <button class="btn-primary" onclick="sendRequest()" id="sendBtn">📤 Send API Request</button>
-                <div id="resultSection" class="hidden"><span id="statusBadge" class="status-badge"></span><div class="result" id="resultContent"></div></div>
+                <button class="btn-primary" onclick="sendTPRequest()" id="tpSendBtn">📤 Send API Request</button>
+                <div id="tpResultSection" class="hidden"><span id="tpStatusBadge" class="status-badge"></span><div class="result" id="tpResultContent"></div></div>
             </div>
-            <div class="card"><h2>📋 Signature Debug</h2><div class="result" id="debugInfo">Signature details will be displayed...</div></div>
+            <div class="card"><h2>📋 Debug Info</h2><div class="result" id="tpDebugInfo">Signature details will be displayed...</div></div>
         </div>
 
+        <!-- ThunderPay Query Tab -->
         <div id="queryTab" class="hidden">
             <div class="card">
-                <h2>🔍 Query Order</h2>
-                <div class="form-group"><label>Query Type</label><div class="input-group"><button class="btn-secondary" id="queryTypePayment" onclick="setQueryType('payment')" style="flex:1;background:#667eea">Payment ID</button><button class="btn-secondary" id="queryTypeTracking" onclick="setQueryType('tracking')" style="flex:1">Tracking ID</button></div></div>
-                <div class="form-group"><label id="queryLabel">Payment ID</label><input type="text" id="queryId" placeholder="Enter Payment ID"></div>
-                <div class="form-group"><label>Query API Path</label><input type="text" id="queryApiPath" value="/api/order/query"></div>
+                <h2>🔑 Merchant Configuration</h2>
+                <div class="grid-2">
+                    <div class="form-group"><label>ACCESS_KEY</label><input type="text" id="tpQAccessKey" placeholder="Enter Access Key"></div>
+                    <div class="form-group"><label>SECRET_KEY</label><input type="text" id="tpQSecretKey" placeholder="Enter Secret Key"></div>
+                </div>
+                <div class="form-group"><label>API Base URL</label><input type="text" id="tpQBaseUrl" value="https://thunderpay.app"></div>
+            </div>
+            <div class="card">
+                <h2>🔍 Query Order (ThunderPay)</h2>
+                <div class="form-group"><label>Query Type</label><div class="input-group"><button class="btn-secondary" id="tpQTypePayment" onclick="setTPQueryType('payment')" style="flex:1;background:#667eea">Payment ID</button><button class="btn-secondary" id="tpQTypeTracking" onclick="setTPQueryType('tracking')" style="flex:1">Tracking ID</button></div></div>
+                <div class="form-group"><label id="tpQLabel">Payment ID</label><input type="text" id="tpQueryId" placeholder="Enter Payment ID"></div>
+                <div class="form-group"><label>Query API Path</label><input type="text" id="tpQApiPath" value="/api/order/query"></div>
             </div>
             <div class="card">
                 <h2>🔍 Query</h2>
-                <button class="btn-success" onclick="queryOrder()" id="queryBtn">🔍 Query Order Status</button>
-                <div id="queryResultSection" class="hidden"><span id="queryStatusBadge" class="status-badge"></span><div class="result" id="queryResultContent"></div></div>
+                <button class="btn-success" onclick="queryTPOrder()" id="tpQueryBtn">🔍 Query Order Status</button>
+                <div id="tpQResultSection" class="hidden"><span id="tpQStatusBadge" class="status-badge"></span><div class="result" id="tpQResultContent"></div></div>
             </div>
-            <div class="card"><h2>📋 Query Debug</h2><div class="result" id="queryDebugInfo">Signature details will be displayed...</div></div>
+            <div class="card"><h2>📋 Debug Info</h2><div class="result" id="tpQDebugInfo">Signature details will be displayed...</div></div>
+        </div>
+
+        <!-- DPAY Query Tab -->
+        <div id="dpayTab" class="hidden">
+            <div class="card">
+                <h2>🔑 DPAY Configuration</h2>
+                <div class="grid-2">
+                    <div class="form-group"><label>DPAY_CLIENT (Client ID)</label><input type="text" id="dpayClientId" placeholder="e.g. 11954"></div>
+                    <div class="form-group"><label>SECRET_SALT</label><input type="text" id="dpaySalt" placeholder="Enter Salt from settings"></div>
+                </div>
+                <div class="form-group"><label>API URL</label><input type="text" id="dpayUrl" value="https://acquiring_api.obmenka.ua/api/einvoice/status"></div>
+            </div>
+            <div class="card">
+                <h2>🔍 Query Invoice (DPAY)</h2>
+                <div class="form-group"><label>Query Type</label><div class="input-group"><button class="btn-secondary" id="dpayTypePayment" onclick="setDPAYQueryType('payment')" style="flex:1;background:#fd7e14">Payment ID</button><button class="btn-secondary" id="dpayTypeTracking" onclick="setDPAYQueryType('tracking')" style="flex:1">Tracking</button></div></div>
+                <div class="form-group"><label id="dpayQLabel">Payment ID</label><input type="text" id="dpayQueryId" placeholder="e.g. 1775724423"></div>
+            </div>
+            <div class="card">
+                <h2>🔍 Query</h2>
+                <button class="btn-warning" onclick="queryDPAYOrder()" id="dpayQueryBtn">🔎 Query DPAY Status</button>
+                <div id="dpayResultSection" class="hidden"><span id="dpayStatusBadge" class="status-badge"></span><div class="result" id="dpayResultContent"></div></div>
+            </div>
+            <div class="card"><h2>📋 Debug Info</h2><div class="result" id="dpayDebugInfo">Signature details will be displayed...</div></div>
         </div>
     </div>
 
     <script>
-        let currentQueryType='payment';
-        function switchTab(t){document.getElementById('createTab').classList.toggle('hidden',t!=='create');document.getElementById('queryTab').classList.toggle('hidden',t!=='query');document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='create'&&i===0)||(t==='query'&&i===1)))}
-        function setQueryType(t){currentQueryType=t;document.getElementById('queryTypePayment').style.background=t==='payment'?'#667eea':'#6c757d';document.getElementById('queryTypeTracking').style.background=t==='tracking'?'#667eea':'#6c757d';document.getElementById('queryLabel').textContent=t==='payment'?'Payment ID':'Tracking ID';document.getElementById('queryId').placeholder='Enter '+(t==='payment'?'Payment ID':'Tracking ID')}
-        function generateOrderNo(){const p='k_',c='abcdefghijklmnopqrstuvwxyz0123456789';let r=p;for(let i=0;i<20;i++){r+=c[Math.floor(Math.random()*c.length)];if(i===3||i===7||i===11)r+='-'}document.getElementById('orderNo').value=r}
-        async function generateHmacSignature(s,m){const e=new TextEncoder(),k=await crypto.subtle.importKey('raw',e.encode(s),{name:'HMAC',hash:'SHA-256'},false,['sign']),sig=await crypto.subtle.sign('HMAC',k,e.encode(m));return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-        function isUrl(s){return typeof s==='string'&&/^(https?:\/\/|www\.)[\w\-\.]+(\.[\w\-]+)+[\w\-\.\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=\.]+$/i.test(s)}
-        function formatJsonWithLinks(o,i=0){const sp='  '.repeat(i);if(o===null)return'null';if(typeof o==='boolean')return o.toString();if(typeof o==='number')return o.toString();if(typeof o==='string')return isUrl(o)?`"<a href=\"${o}\" target=\"_blank\" class=\"url-link\">🔗 ${o}</a>\"`:`\"${o.replace(/\"/g,'\\\\\"')}\"`;if(Array.isArray(o)){if(!o.length)return'[]';let h='[\\n';for(let j=0;j<o.length;j++)h+=sp+'  '+formatJsonWithLinks(o[j],i+1)+(j<o.length-1?',':'')+'\\n';return h+sp+']'}if(typeof o==='object'){const k=Object.keys(o);if(!k.length)return'{}';let h='{\\n';for(let j=0;j<k.length;j++){h+=sp+`  \"${k[j]}\": `;const v=o[k[j]];h+=typeof v==='string'&&isUrl(v)?`\"<a href=\"${v}\" target=\"_blank\" class=\"url-link\">🔗 ${v}</a>\"`:formatJsonWithLinks(v,i+1);if(j<k.length-1)h+=',';h+='\\n'}return h+sp+'}'}return String(o)}
-        async function sendRequest(){const b=document.getElementById('sendBtn'),rs=document.getElementById('resultSection'),rc=document.getElementById('resultContent'),sb=document.getElementById('statusBadge'),di=document.getElementById('debugInfo'),ak=document.getElementById('accessKey').value.trim(),sk=document.getElementById('secretKey').value.trim(),bu=document.getElementById('baseUrl').value.trim(),ap=document.getElementById('apiPath').value.trim(),on=document.getElementById('orderNo').value.trim(),oa=parseFloat(document.getElementById('orderAmount').value),fn=document.getElementById('fullName').value.trim(),nu=document.getElementById('notifyUrl').value.trim();if(!ak||!sk){alert('Please fill in ACCESS_KEY and SECRET_KEY');return}if(!on){alert('Please generate or enter Order No');return}b.disabled=true;b.textContent='📤 Sending...';try{const body={order_no:on,order_amount:oa,fullname:fn,notify_url:nu},jb=JSON.stringify(body,Object.keys(body),0),ts=Date.now().toString(),msg=ap+ts+jb,asig=await generateHmacSignature(sk,msg);di.textContent=`Signature String (msg):\\n${msg}\\n\\nJSON Body:\\n${jb}\\n\\nTimestamp:\\n${ts}\\n\\nGenerated Signature:\\n${asig}`;const url=bu.replace(/\\/$/,'')+ap,headers={'ACCESS-KEY':ak,'ACCESS-TIMESTAMP':ts,'ACCESS-SIGN':asig,'Content-Type':'application/json','Accept':'application/json'},resp=await fetch(url,{method:'POST',headers:headers,body:jb}),rt=await resp.text();let rd;try{rd=JSON.parse(rt)}catch{rd=rt}rs.classList.remove('hidden');if(resp.ok){sb.className='status-badge status-success';sb.textContent=`✅ ${resp.status} ${resp.statusText}`;rc.className='result success'}else{sb.className='status-badge status-error';sb.textContent=`❌ ${resp.status} ${resp.statusText}`;rc.className='result error'}rc.innerHTML=typeof rd==='string'?rd:formatJsonWithLinks(rd)}catch(e){rs.classList.remove('hidden');sb.className='status-badge status-error';sb.textContent='❌ Request Failed';rc.className='result error';rc.textContent=`Error: ${e.message}`}finally{b.disabled=false;b.textContent='📤 Send API Request'}}
-        async function queryOrder(){const b=document.getElementById('queryBtn'),rs=document.getElementById('queryResultSection'),rc=document.getElementById('queryResultContent'),sb=document.getElementById('queryStatusBadge'),di=document.getElementById('queryDebugInfo'),ak=document.getElementById('accessKey').value.trim(),sk=document.getElementById('secretKey').value.trim(),bu=document.getElementById('baseUrl').value.trim(),qp=document.getElementById('queryApiPath').value.trim(),qi=document.getElementById('queryId').value.trim();if(!ak||!sk){alert('Please fill in ACCESS_KEY and SECRET_KEY');return}if(!qi){alert(`Please enter ${currentQueryType==='payment'?'Payment ID':'Tracking ID'}`);return}b.disabled=true;b.textContent='🔍 Querying...';try{const body=currentQueryType==='payment'?{payment_id:qi}:{tracking:qi},jb=JSON.stringify(body,Object.keys(body),0),ts=Date.now().toString(),msg=qp+ts+jb,asig=await generateHmacSignature(sk,msg);di.textContent=`Query Type: ${currentQueryType.toUpperCase()}\\nQuery ID: ${qi}\\n\\nSignature String (msg):\\n${msg}\\n\\nJSON Body:\\n${jb}\\n\\nTimestamp:\\n${ts}\\n\\nGenerated Signature:\\n${asig}`;const url=bu.replace(/\\/$/,'')+qp,headers={'ACCESS-KEY':ak,'ACCESS-TIMESTAMP':ts,'ACCESS-SIGN':asig,'Content-Type':'application/json','Accept':'application/json'},resp=await fetch(url,{method:'POST',headers:headers,body:jb}),rt=await resp.text();let rd;try{rd=JSON.parse(rt)}catch{rd=rt}rs.classList.remove('hidden');if(resp.ok){sb.className='status-badge status-success';sb.textContent=`✅ ${resp.status} ${resp.statusText}`;rc.className='result success'}else{sb.className='status-badge status-error';sb.textContent=`❌ ${resp.status} ${resp.statusText}`;rc.className='result error'}rc.innerHTML=typeof rd==='string'?rd:formatJsonWithLinks(rd)}catch(e){rs.classList.remove('hidden');sb.className='status-badge status-error';sb.textContent='❌ Query Failed';rc.className='result error';rc.textContent=`Error: ${e.message}`}finally{b.disabled=false;b.textContent='🔍 Query Order Status'}}
+        // ====== Tab Switching ======
+        function switchTab(tab) {
+            document.getElementById('createTab').classList.toggle('hidden', tab !== 'create');
+            document.getElementById('queryTab').classList.toggle('hidden', tab !== 'query');
+            document.getElementById('dpayTab').classList.toggle('hidden', tab !== 'dpay');
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                b.classList.toggle('active', (tab === 'create' && i === 0) || (tab === 'query' && i === 1) || (tab === 'dpay' && i === 2));
+            });
+        }
+
+        // ====== ThunderPay Create Order ======
+        let tpQueryType = 'payment';
+        function setTPQueryType(type) {
+            tpQueryType = type;
+            document.getElementById('tpQTypePayment').style.background = type === 'payment' ? '#667eea' : '#6c757d';
+            document.getElementById('tpQTypeTracking').style.background = type === 'tracking' ? '#667eea' : '#6c757d';
+            document.getElementById('tpQLabel').textContent = type === 'payment' ? 'Payment ID' : 'Tracking ID';
+            document.getElementById('tpQueryId').placeholder = 'Enter ' + (type === 'payment' ? 'Payment ID' : 'Tracking ID');
+        }
+
+        function generateOrderNo() {
+            const p = 'k_', c = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let r = p;
+            for (let i = 0; i < 20; i++) {
+                r += c[Math.floor(Math.random() * c.length)];
+                if (i === 3 || i === 7 || i === 11) r += '-';
+            }
+            document.getElementById('tpOrderNo').value = r;
+        }
+
+        async function generateTPHmacSignature(secret, message) {
+            const e = new TextEncoder(), k = await crypto.subtle.importKey('raw', e.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+            const sig = await crypto.subtle.sign('HMAC', k, e.encode(message));
+            return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function formatJsonWithLinks(o, i = 0) {
+            const sp = '  '.repeat(i);
+            if (o === null) return 'null';
+            if (typeof o === 'boolean') return o.toString();
+            if (typeof o === 'number') return o.toString();
+            if (typeof o === 'string') {
+                if (/^(https?:\/\/|www\.)[\w\-\.]+(\.[\w\-]+)+[\w\-\.\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=\.]+$/i.test(o)) {
+                    return `"<a href=\"${o}\" target=\"_blank\" class=\"url-link\">🔗 ${o}</a>\"`;
+                }
+                return `"${o.replace(/"/g, '\\"')}"`;
+            }
+            if (Array.isArray(o)) {
+                if (!o.length) return '[]';
+                let h = '[\n';
+                for (let j = 0; j < o.length; j++) h += sp + '  ' + formatJsonWithLinks(o[j], i + 1) + (j < o.length - 1 ? ',' : '') + '\n';
+                return h + sp + ']';
+            }
+            if (typeof o === 'object') {
+                const k = Object.keys(o);
+                if (!k.length) return '{}';
+                let h = '{\n';
+                for (let j = 0; j < k.length; j++) {
+                    h += sp + `  "${k[j]}": ` + formatJsonWithLinks(o[k[j]], i + 1);
+                    if (j < k.length - 1) h += ',';
+                    h += '\n';
+                }
+                return h + sp + '}';
+            }
+            return String(o);
+        }
+
+        async function sendTPRequest() {
+            const b = document.getElementById('tpSendBtn'), rs = document.getElementById('tpResultSection'), rc = document.getElementById('tpResultContent'), sb = document.getElementById('tpStatusBadge'), di = document.getElementById('tpDebugInfo');
+            const ak = document.getElementById('tpAccessKey').value.trim(), sk = document.getElementById('tpSecretKey').value.trim(), bu = document.getElementById('tpBaseUrl').value.trim(), ap = document.getElementById('tpApiPath').value.trim();
+            const on = document.getElementById('tpOrderNo').value.trim(), oa = parseFloat(document.getElementById('tpOrderAmount').value), fn = document.getElementById('tpFullName').value.trim(), nu = document.getElementById('tpNotifyUrl').value.trim();
+            if (!ak || !sk) { alert('Please fill in ACCESS_KEY and SECRET_KEY'); return; }
+            if (!on) { alert('Please generate or enter Order No'); return; }
+            b.disabled = true; b.textContent = '📤 Sending...';
+            try {
+                const body = { order_no: on, order_amount: oa, fullname: fn, notify_url: nu }, jb = JSON.stringify(body, Object.keys(body), 0), ts = Date.now().toString(), msg = ap + ts + jb, asig = await generateTPHmacSignature(sk, msg);
+                di.textContent = `Signature String (msg):\n${msg}\n\nJSON Body:\n${jb}\n\nTimestamp:\n${ts}\n\nGenerated Signature:\n${asig}`;
+                const url = bu.replace(/\/$/, '') + ap, headers = { 'ACCESS-KEY': ak, 'ACCESS-TIMESTAMP': ts, 'ACCESS-SIGN': asig, 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                const resp = await fetch(url, { method: 'POST', headers: headers, body: jb }), rt = await resp.text();
+                let rd; try { rd = JSON.parse(rt); } catch { rd = rt; }
+                rs.classList.remove('hidden');
+                if (resp.ok) { sb.className = 'status-badge status-success'; sb.textContent = `✅ ${resp.status} ${resp.statusText}`; rc.className = 'result success'; }
+                else { sb.className = 'status-badge status-error'; sb.textContent = `❌ ${resp.status} ${resp.statusText}`; rc.className = 'result error'; }
+                rc.innerHTML = typeof rd === 'string' ? rd : formatJsonWithLinks(rd);
+            } catch (e) { rs.classList.remove('hidden'); sb.className = 'status-badge status-error'; sb.textContent = '❌ Request Failed'; rc.className = 'result error'; rc.textContent = `Error: ${e.message}`; }
+            finally { b.disabled = false; b.textContent = '📤 Send API Request'; }
+        }
+
+        async function queryTPOrder() {
+            const b = document.getElementById('tpQueryBtn'), rs = document.getElementById('tpQResultSection'), rc = document.getElementById('tpQResultContent'), sb = document.getElementById('tpQStatusBadge'), di = document.getElementById('tpQDebugInfo');
+            const ak = document.getElementById('tpQAccessKey').value.trim(), sk = document.getElementById('tpQSecretKey').value.trim(), bu = document.getElementById('tpQBaseUrl').value.trim(), qp = document.getElementById('tpQApiPath').value.trim(), qi = document.getElementById('tpQueryId').value.trim();
+            if (!ak || !sk) { alert('Please fill in ACCESS_KEY and SECRET_KEY'); return; }
+            if (!qi) { alert(`Please enter ${tpQueryType === 'payment' ? 'Payment ID' : 'Tracking ID'}`); return; }
+            b.disabled = true; b.textContent = '🔍 Querying...';
+            try {
+                const body = tpQueryType === 'payment' ? { payment_id: qi } : { tracking: qi }, jb = JSON.stringify(body, Object.keys(body), 0), ts = Date.now().toString(), msg = qp + ts + jb, asig = await generateTPHmacSignature(sk, msg);
+                di.textContent = `Query Type: ${tpQueryType.toUpperCase()}\nQuery ID: ${qi}\n\nSignature String (msg):\n${msg}\n\nJSON Body:\n${jb}\n\nTimestamp:\n${ts}\n\nGenerated Signature:\n${asig}`;
+                const url = bu.replace(/\/$/, '') + qp, headers = { 'ACCESS-KEY': ak, 'ACCESS-TIMESTAMP': ts, 'ACCESS-SIGN': asig, 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                const resp = await fetch(url, { method: 'POST', headers: headers, body: jb }), rt = await resp.text();
+                let rd; try { rd = JSON.parse(rt); } catch { rd = rt; }
+                rs.classList.remove('hidden');
+                if (resp.ok) { sb.className = 'status-badge status-success'; sb.textContent = `✅ ${resp.status} ${resp.statusText}`; rc.className = 'result success'; }
+                else { sb.className = 'status-badge status-error'; sb.textContent = `❌ ${resp.status} ${resp.statusText}`; rc.className = 'result error'; }
+                rc.innerHTML = typeof rd === 'string' ? rd : formatJsonWithLinks(rd);
+            } catch (e) { rs.classList.remove('hidden'); sb.className = 'status-badge status-error'; sb.textContent = '❌ Query Failed'; rc.className = 'result error'; rc.textContent = `Error: ${e.message}`; }
+            finally { b.disabled = false; b.textContent = '🔍 Query Order Status'; }
+        }
+
+        // ====== DPAY Query (Obmenka) ======
+        let dpayQueryType = 'payment';
+        function setDPAYQueryType(type) {
+            dpayQueryType = type;
+            document.getElementById('dpayTypePayment').style.background = type === 'payment' ? '#fd7e14' : '#6c757d';
+            document.getElementById('dpayTypeTracking').style.background = type === 'tracking' ? '#fd7e14' : '#6c757d';
+            document.getElementById('dpayQLabel').textContent = type === 'payment' ? 'Payment ID' : 'Tracking';
+            document.getElementById('dpayQueryId').placeholder = type === 'payment' ? 'e.g. 1775724423' : 'Enter Tracking ID';
+        }
+
+        // CORS Proxy helper for static hosting (GitHub Pages cannot call 3rd-party APIs directly)
+        function withCorsProxy(url) {
+            // Using a public CORS proxy so the static page can reach the DPAY API.
+            // If this stops working, switch to the Python backend (app.py) attached in the same message.
+            return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+        }
+
+        // MD5 implementation (Web Crypto does not support MD5)
+        function md5(str) {
+            function rotateLeft(n, b) { return (n << b) | (n >>> (32 - b)); }
+            function addUnsigned(a, b) {
+                var lsw = (a & 0xFFFF) + (b & 0xFFFF), msw = (a >> 16) + (b >> 16) + (lsw >> 16);
+                return (msw << 16) | (lsw & 0xFFFF);
+            }
+            function cmn(q, a, b, x, s, t) {
+                a = addUnsigned(addUnsigned(a, q), addUnsigned(x, t));
+                return addUnsigned(rotateLeft(a, s), b);
+            }
+            function ff(a, b, c, d, x, s, t) { return cmn((b & c) | ((~b) & d), a, b, x, s, t); }
+            function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & (~d)), a, b, x, s, t); }
+            function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+            function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | (~d)), a, b, x, s, t); }
+            function utf8Encode(str) {
+                str = str.replace(/\r\n/g, '\n');
+                var utftext = '';
+                for (var n = 0; n < str.length; n++) {
+                    var c = str.charCodeAt(n);
+                    if (c < 128) utftext += String.fromCharCode(c);
+                    else if ((c > 127) && (c < 2048)) {
+                        utftext += String.fromCharCode((c >> 6) | 192);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    } else {
+                        utftext += String.fromCharCode((c >> 12) | 224);
+                        utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                }
+                return utftext;
+            }
+            function binl2rstr(input) {
+                var output = '';
+                for (var i = 0; i < input.length * 32; i += 8)
+                    output += String.fromCharCode((input[i >> 5] >>> (i % 32)) & 0xFF);
+                return output;
+            }
+            function rstr2binl(input) {
+                var output = Array(input.length >> 2);
+                for (var i = 0; i < output.length; i++) output[i] = 0;
+                for (var i = 0; i < input.length * 8; i += 8)
+                    output[i >> 5] |= (input.charCodeAt(i / 8) & 0xFF) << (i % 32);
+                return output;
+            }
+            var x = rstr2binl(utf8Encode(str));
+            var a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+            for (var i = 0; i < x.length; i += 16) {
+                var olda = a, oldb = b, oldc = c, oldd = d;
+                a = ff(a, b, c, d, x[i + 0], 7, -680876936); d = ff(d, a, b, c, x[i + 1], 12, -389564586); c = ff(c, d, a, b, x[i + 2], 17, 606105819); b = ff(b, c, d, a, x[i + 3], 22, -1044525330);
+                a = ff(a, b, c, d, x[i + 4], 7, -176418897); d = ff(d, a, b, c, x[i + 5], 12, 1200080426); c = ff(c, d, a, b, x[i + 6], 17, -1473231341); b = ff(b, c, d, a, x[i + 7], 22, -45705983);
+                a = ff(a, b, c, d, x[i + 8], 7, 1770035416); d = ff(d, a, b, c, x[i + 9], 12, -1958414417); c = ff(c, d, a, b, x[i + 10], 17, -42063); b = ff(b, c, d, a, x[i + 11], 22, -1990404162);
+                a = ff(a, b, c, d, x[i + 12], 7, 1804603682); d = ff(d, a, b, c, x[i + 13], 12, -40341101); c = ff(c, d, a, b, x[i + 14], 17, -1502002290); b = ff(b, c, d, a, x[i + 15], 22, 1236535329);
+                a = gg(a, b, c, d, x[i + 1], 5, -165796510); d = gg(d, a, b, c, x[i + 6], 9, -1069501632); c = gg(c, d, a, b, x[i + 11], 14, 643717713); b = gg(b, c, d, a, x[i + 0], 20, -373897302);
+                a = gg(a, b, c, d, x[i + 5], 5, -701558691); d = gg(d, a, b, c, x[i + 10], 9, 38016083); c = gg(c, d, a, b, x[i + 15], 14, -660478335); b = gg(b, c, d, a, x[i + 4], 20, -405537848);
+                a = gg(a, b, c, d, x[i + 9], 5, 568446438); d = gg(d, a, b, c, x[i + 14], 9, -1019803690); c = gg(c, d, a, b, x[i + 3], 14, -187363961); b = gg(b, c, d, a, x[i + 8], 20, 1163531501);
+                a = gg(a, b, c, d, x[i + 13], 5, -1444681467); d = gg(d, a, b, c, x[i + 2], 9, -51403784); c = gg(c, d, a, b, x[i + 7], 14, 1735328473); b = gg(b, c, d, a, x[i + 12], 20, -1926607734);
+                a = hh(a, b, c, d, x[i + 5], 4, -378558); d = hh(d, a, b, c, x[i + 8], 11, -2022574463); c = hh(c, d, a, b, x[i + 11], 16, 1839030562); b = hh(b, c, d, a, x[i + 14], 23, -35309556);
+                a = hh(a, b, c, d, x[i + 1], 4, -1530992060); d = hh(d, a, b, c, x[i + 4], 11, 1272893353); c = hh(c, d, a, b, x[i + 7], 16, -155497632); b = hh(b, c, d, a, x[i + 10], 23, -1094730640);
+                a = hh(a, b, c, d, x[i + 13], 4, 681279174); d = hh(d, a, b, c, x[i + 0], 11, -358537222); c = hh(c, d, a, b, x[i + 3], 16, -722521979); b = hh(b, c, d, a, x[i + 6], 23, 76029189);
+                a = hh(a, b, c, d, x[i + 9], 4, -640364487); d = hh(d, a, b, c, x[i + 12], 11, -421815835); c = hh(c, d, a, b, x[i + 15], 16, 530742520); b = hh(b, c, d, a, x[i + 2], 23, -995338651);
+                a = ii(a, b, c, d, x[i + 0], 6, -198630844); d = ii(d, a, b, c, x[i + 7], 10, 1126891415); c = ii(c, d, a, b, x[i + 14], 15, -1416354905); b = ii(b, c, d, a, x[i + 5], 21, -57434055);
+                a = ii(a, b, c, d, x[i + 12], 6, 1700485571); d = ii(d, a, b, c, x[i + 3], 10, -1894986606); c = ii(c, d, a, b, x[i + 10], 15, -1051523); b = ii(b, c, d, a, x[i + 1], 21, -2054922799);
+                a = ii(a, b, c, d, x[i + 8], 6, 1873313359); d = ii(d, a, b, c, x[i + 15], 10, -30611744); c = ii(c, d, a, b, x[i + 6], 15, -1560198380); b = ii(b, c, d, a, x[i + 13], 21, 1309151649);
+                a = ii(a, b, c, d, x[i + 4], 6, -145523070); d = ii(d, a, b, c, x[i + 11], 10, -1120210379); c = ii(c, d, a, b, x[i + 2], 15, 718787259); b = ii(b, c, d, a, x[i + 9], 21, -343485551);
+                a = addUnsigned(a, olda); b = addUnsigned(b, oldb); c = addUnsigned(c, oldc); d = addUnsigned(d, oldd);
+            }
+            return binl2rstr([a, b, c, d]);
+        }
+
+        async function generateDPAYSignature(dataJson, salt) {
+            const sha1Buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(dataJson));
+            const sha1Base64 = btoa(String.fromCharCode(...new Uint8Array(sha1Buf)));
+            const combined = salt + sha1Base64 + salt;
+            const md5Raw = md5(combined);
+            return btoa(md5Raw);
+        }
+
+        async function queryDPAYOrder() {
+            const b = document.getElementById('dpayQueryBtn'), rs = document.getElementById('dpayResultSection'), rc = document.getElementById('dpayResultContent'), sb = document.getElementById('dpayStatusBadge'), di = document.getElementById('dpayDebugInfo');
+            const clientId = document.getElementById('dpayClientId').value.trim(), salt = document.getElementById('dpaySalt').value.trim(), url = document.getElementById('dpayUrl').value.trim(), qi = document.getElementById('dpayQueryId').value.trim();
+            if (!clientId || !salt) { alert('Please fill in DPAY_CLIENT and SECRET_SALT'); return; }
+            if (!qi) { alert(`Please enter ${dpayQueryType === 'payment' ? 'Payment ID' : 'Tracking ID'}`); return; }
+            b.disabled = true; b.textContent = '🔎 Querying...';
+            try {
+                const payload = dpayQueryType === 'payment' ? { payment_id: qi } : { tracking: qi };
+                const dataJson = JSON.stringify(payload);
+                const signature = await generateDPAYSignature(dataJson, salt);
+                const headers = { 'Content-Type': 'application/json', 'DPAY_CLIENT': clientId, 'DPAY_SECURE': signature };
+                di.textContent = `Query Type: ${dpayQueryType.toUpperCase()}\nQuery ID: ${qi}\n\nJSON Body:\n${dataJson}\n\nGenerated DPAY_SECURE:\n${signature}`;
+                const proxyUrl = withCorsProxy(url);
+                const resp = await fetch(proxyUrl, { method: 'POST', headers: headers, body: dataJson }), rt = await resp.text();
+                let rd; try { rd = JSON.parse(rt); } catch { rd = rt; }
+                rs.classList.remove('hidden');
+                if (resp.ok) { sb.className = 'status-badge status-success'; sb.textContent = `✅ ${resp.status} ${resp.statusText}`; rc.className = 'result success'; }
+                else { sb.className = 'status-badge status-error'; sb.textContent = `❌ ${resp.status} ${resp.statusText}`; rc.className = 'result error'; }
+                rc.innerHTML = typeof rd === 'string' ? rd : formatJsonWithLinks(rd);
+            } catch (e) { rs.classList.remove('hidden'); sb.className = 'status-badge status-error'; sb.textContent = '❌ Query Failed'; rc.className = 'result error'; rc.textContent = `Error: ${e.message}`; }
+            finally { b.disabled = false; b.textContent = '🔎 Query DPAY Status'; }
+        }
+
         generateOrderNo();
     </script>
 </body>
