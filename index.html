@@ -41,11 +41,13 @@
         .status-success { background: #28a745; color: white; }
         .status-error { background: #dc3545; color: white; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
         .tab-nav { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 12px; }
         .tab-btn { flex: 1; padding: 12px 20px; background: transparent; color: white; border-radius: 8px; font-size: 14px; font-weight: 600; }
         .tab-btn.active { background: white; color: #667eea; }
         .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
-        @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } .tab-nav { flex-direction: column; } }
+        .card-section-note { font-size: 12px; color: #888; margin-bottom: 12px; }
+        @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr 1fr; } .tab-nav { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -73,6 +75,17 @@
                 <div class="form-group"><label>Order No</label><div class="input-group"><input type="text" id="tpOrderNo"><button class="btn-secondary" onclick="generateOrderNo()">🎲 Random</button></div></div>
                 <div class="grid-2"><div class="form-group"><label>Order Amount</label><input type="number" id="tpOrderAmount" value="300"></div><div class="form-group"><label>Full Name</label><input type="text" id="tpFullName" value="Ravi Chandrana"></div></div>
                 <div class="form-group"><label>Notify URL</label><input type="url" id="tpNotifyUrl" value="http://www.xxx.com/api"></div>
+            </div>
+            <div class="card">
+                <h2>💳 H2H Card Information</h2>
+                <p class="card-section-note">Fill in card details below. If left empty, H2H card fields will be omitted from the request body.</p>
+                <div class="form-group"><label>Card Holder</label><input type="text" id="tpCardHolder" placeholder="e.g. John Doe" value="Card Holder"></div>
+                <div class="form-group"><label>Card Number</label><input type="text" id="tpCardNumber" placeholder="e.g. 4444111144441111" value="4444111144441111"></div>
+                <div class="grid-3">
+                    <div class="form-group"><label>Month</label><input type="text" id="tpCardMonth" placeholder="MM" value="01" maxlength="2"></div>
+                    <div class="form-group"><label>Year</label><input type="text" id="tpCardYear" placeholder="YY" value="30" maxlength="2"></div>
+                    <div class="form-group"><label>CVV</label><input type="text" id="tpCardCvv" placeholder="001" value="001" maxlength="4"></div>
+                </div>
             </div>
             <div class="card">
                 <h2>🚀 Send Request</h2>
@@ -174,9 +187,9 @@
             if (typeof o === 'number') return o.toString();
             if (typeof o === 'string') {
                 if (/^(https?:\/\/|www\.)[\w\-\.]+(\.[\w\-]+)+[\w\-\.\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=\.]+$/i.test(o)) {
-                    return `"<a href=\"${o}\" target=\"_blank\" class=\"url-link\">🔗 ${o}</a>\"`;
+                    return `\"<a href=\"${o}\" target=\"_blank\" class=\"url-link\">🔗 ${o}</a>\"`;
                 }
-                return `"${o.replace(/"/g, '\\"')}"`;
+                return `\"${o.replace(/\"/g, '\\"')}\"`;
             }
             if (Array.isArray(o)) {
                 if (!o.length) return '[]';
@@ -189,7 +202,7 @@
                 if (!k.length) return '{}';
                 let h = '{\n';
                 for (let j = 0; j < k.length; j++) {
-                    h += sp + `  "${k[j]}": ` + formatJsonWithLinks(o[k[j]], i + 1);
+                    h += sp + `"${k[j]}": ` + formatJsonWithLinks(o[k[j]], i + 1);
                     if (j < k.length - 1) h += ',';
                     h += '\n';
                 }
@@ -206,7 +219,19 @@
             if (!on) { alert('Please generate or enter Order No'); return; }
             b.disabled = true; b.textContent = '📤 Sending...';
             try {
-                const body = { order_no: on, order_amount: oa, fullname: fn, notify_url: nu }, jb = JSON.stringify(body, Object.keys(body), 0), ts = Date.now().toString(), msg = ap + ts + jb, asig = await generateTPHmacSignature(sk, msg);
+                const cardNumber = document.getElementById('tpCardNumber').value.trim();
+                const body = { order_no: on, order_amount: oa, fullname: fn, notify_url: nu };
+                // Wrap card fields under "h2h" — only included if cardNumber is provided
+                if (cardNumber) {
+                    body.h2h = {
+                        cardholder: document.getElementById('tpCardHolder').value.trim(),
+                        cardnumber: cardNumber,
+                        month: document.getElementById('tpCardMonth').value.trim(),
+                        year: document.getElementById('tpCardYear').value.trim(),
+                        cvv: document.getElementById('tpCardCvv').value.trim()
+                    };
+                }
+                const jb = JSON.stringify(body, Object.keys(body), 0), ts = Date.now().toString(), msg = ap + ts + jb, asig = await generateTPHmacSignature(sk, msg);
                 di.textContent = `Signature String (msg):\n${msg}\n\nJSON Body:\n${jb}\n\nTimestamp:\n${ts}\n\nGenerated Signature:\n${asig}`;
                 const url = bu.replace(/\/$/, '') + ap, headers = { 'ACCESS-KEY': ak, 'ACCESS-TIMESTAMP': ts, 'ACCESS-SIGN': asig, 'Content-Type': 'application/json', 'Accept': 'application/json' };
                 const resp = await fetch(url, { method: 'POST', headers: headers, body: jb }), rt = await resp.text();
@@ -251,8 +276,6 @@
 
         // CORS Proxy helper for static hosting (GitHub Pages cannot call 3rd-party APIs directly)
         function withCorsProxy(url) {
-            // Using a public CORS proxy so the static page can reach the DPAY API.
-            // If this stops working, switch to the Python backend (app.py) attached in the same message.
             return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
         }
 
